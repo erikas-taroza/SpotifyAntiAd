@@ -52,7 +52,7 @@ async def main(p):
 if __name__ == "__main__":
     # get spotify.exe path
     spotify_path = os.path.expanduser("~") + "\\AppData\\Roaming\\Spotify\\Spotify.exe"
-    print("WARNING: Spotify must be installed from Spotify, not the Windows Store.")
+    print("INFO: Make sure Spotify was installed from spotify.com and not the Windows Store. Otherwise, this program will not open Spotify.")
 
     program = Program(app)
 
