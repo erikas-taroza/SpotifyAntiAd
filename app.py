@@ -21,7 +21,6 @@ class Program:
 
     # check the current playback to see if an ad is playing
     async def check_current_playback(self):
-
         playback = self.spotify.current_playback()
 
         if playback != None:
@@ -34,9 +33,10 @@ class Program:
 
                 window.set_focus()
                 pyautogui.press("playpause")
+                pyautogui.press("nexttrack")
+                window.minimize()
         
         await asyncio.sleep(3)
-        await self.check_current_playback()
 
     async def reload_spotify(self):
         self.app.kill()
@@ -44,8 +44,6 @@ class Program:
         self.app.start(spotify_path)
 
 async def main(p):
-    print("Running...\n")
-    app.start(spotify_path)
     await p.check_current_playback()
         
 
@@ -53,10 +51,12 @@ if __name__ == "__main__":
     # get spotify.exe path
     spotify_path = os.path.expanduser("~") + "\\AppData\\Roaming\\Spotify\\Spotify.exe"
     print("INFO: Make sure Spotify was installed from spotify.com and not the Windows Store. Otherwise, this program will not open Spotify.")
+    print("\nRunning...")
 
     program = Program(app)
+    app.start(spotify_path)
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(main(program))
-    input("Press ENTER to close...")
+    while True:
+        loop.run_until_complete(main(program))
