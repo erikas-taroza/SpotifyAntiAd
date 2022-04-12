@@ -2,7 +2,7 @@ import os, asyncio
 from pywinauto import Application
 import pyautogui
 import spotipy
-from spotipy.oauth2 import SpotifyPKCE
+from spotipy.oauth2 import SpotifyOAuth
 from client_keys import ClientKeys
 
 os.environ["SPOTIPY_CLIENT_ID"] = ClientKeys.client_id
@@ -16,11 +16,16 @@ class Program:
     # init spotify
     def __init__(self, app):
         self.scope = ["user-read-playback-state"]
-        self.spotify = spotipy.Spotify(auth_manager = SpotifyPKCE(scope = self.scope))
+        self.spotify = spotipy.Spotify(auth_manager = SpotifyOAuth(scope = self.scope))
         self.app = app
 
     # check the current playback to see if an ad is playing
     async def check_current_playback(self):
+        # if the token is expired, refresh
+        auth = self.spotify.auth_manager
+        if auth.is_token_expired(auth.get_cached_token()):
+            auth.refresh_access_token(auth.get_cached_token()["refresh_token"])
+
         playback = self.spotify.current_playback()
 
         if playback != None:
