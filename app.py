@@ -1,4 +1,4 @@
-import os, asyncio
+import os, asyncio, traceback
 from pywinauto import Application
 import pyautogui
 import spotipy
@@ -28,13 +28,12 @@ class Program:
             auth.refresh_access_token(token["refresh_token"])
 
         playback = self.spotify.current_playback()
-
         if playback != None:
-            current_state = dict(playback).get("currently_playing_type")
+            current_state = playback.get("currently_playing_type")
             if current_state == "ad":
                 print("Ad detected! Rebooting Spotify.")
                 await self.reload_spotify()
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(1)
 
                 window = self.app.windows()[0]
                 window.set_focus()
@@ -62,7 +61,11 @@ if __name__ == "__main__":
     program = Program(app)
     app.start(spotify_path)
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    while True:
-        loop.run_until_complete(main(program))
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        while True:
+            loop.run_until_complete(main(program))
+    except:
+        print(traceback.format_exc())
+        input("Error detected. Press ENTER to close...")
