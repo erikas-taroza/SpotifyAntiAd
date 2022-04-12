@@ -23,8 +23,9 @@ class Program:
     async def check_current_playback(self):
         # if the token is expired, refresh
         auth = self.spotify.auth_manager
-        if auth.is_token_expired(auth.get_cached_token()):
-            auth.refresh_access_token(auth.get_cached_token()["refresh_token"])
+        token = auth.get_cached_token()
+        if token != None and auth.is_token_expired(token):
+            auth.refresh_access_token(token["refresh_token"])
 
         playback = self.spotify.current_playback()
 
@@ -33,9 +34,9 @@ class Program:
             if current_state == "ad":
                 print("Ad detected! Rebooting Spotify.")
                 await self.reload_spotify()
-                await asyncio.sleep(1)
-                window = self.app.windows()[0]
+                await asyncio.sleep(0.2)
 
+                window = self.app.windows()[0]
                 window.set_focus()
                 pyautogui.press("playpause")
                 pyautogui.press("nexttrack")
