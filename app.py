@@ -24,6 +24,7 @@ class Program:
         self.restarting = False
 
     # check the current playback to see if an ad is playing
+    # TODO: handle case where the player is paused but minimized so the api is still getting called
     def check_for_ads(self):
         self.refresh_token()
         self.current_playback = self.spotify.current_playback()
@@ -35,20 +36,6 @@ class Program:
             else:
                 # wait for the song to end
                 evnt.wait((self.current_playback["item"]["duration_ms"] - self.current_playback["progress_ms"]) / 1000)
-            # try:
-            #     # handle error in case spotify is minimized during an ad
-            # except TypeError:
-            #     if current_state == "ad":
-            #         print("Ad detected! Rebooting Spotify.")
-            #         self.reload_spotify()
-
-            # if we dont wait some time here, we get a TypeError when main() calls this method again
-            # ads dont provide the time needed in the calculation above
-            # time.sleep(0.5)
-            # current_state = self.spotify.current_playback()["currently_playing_type"]
-            # if current_state == "ad":
-            #     print("Ad detected! Rebooting Spotify.")
-            #     self.reload_spotify()
 
     # refresh the cached token if it is expired. expires in about 1 hour
     def refresh_token(self):
@@ -66,13 +53,14 @@ class Program:
 
         time.sleep(1)
         window = self.app.windows()[0]
-        self.window_handler.window = window
-        self.restarting = False
-        
         window.set_focus()
         pyautogui.press("playpause")
         pyautogui.press("nexttrack")
         window.minimize()
+
+        self.window_handler.window = window
+        self.restarting = False
+        
 
 def main(program, window_handler):
     if window_handler.can_check_ads:
