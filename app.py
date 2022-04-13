@@ -1,4 +1,5 @@
 import os, traceback, time, pyautogui, tekore
+from client_keys import ClientKeys
 from auth_helper import AuthHelper
 from pywinauto import Application
 from window_handler import WindowHandler
@@ -26,7 +27,7 @@ class Program:
     # TODO: handle case where the player is paused but minimized so the api is still getting called
     async def check_for_ads(self):
         self.current_playback = await self.spotify.playback_currently_playing()
-
+        
         if self.current_playback != None and self.current_playback.is_playing:
             if self.current_playback.currently_playing_type == "ad":
                 print("Ad detected! Rebooting Spotify.")
@@ -63,14 +64,13 @@ if __name__ == "__main__":
     print("INFO: Make sure Spotify was installed from spotify.com and not the Windows Store. Otherwise, this program will not open Spotify.")
     print("\nRunning...")
 
-    import asyncio
     try:
         # get the token
         # if there is a config file, get the token from there. otherwise, get the token from a prompt
         try:
             config = tekore.config_from_file("./config.ini", return_refresh = True)
             (client_id, client_secret, redirect_url, refresh_token) = config
-            token = refresh_token
+            token = tekore.refresh_user_token(ClientKeys.client_id, ClientKeys.client_secret, refresh_token)
         except:
             auth_helper = AuthHelper()
             token = auth_helper.get_token()
@@ -85,8 +85,12 @@ if __name__ == "__main__":
         window_handler.program = program
         window_handler.start()
 
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         while True:
-            asyncio.run(main(program, window_handler))
+            loop.run_until_complete(main(program, window_handler))
+
     except:
         print(traceback.format_exc())
         input("Error detected. Press ENTER to close...")
