@@ -1,22 +1,21 @@
-import os, traceback, time, pyautogui, spotipy
+import os, traceback, time, pyautogui, tekore
+from auth_helper import AuthHelper
 from pywinauto import Application
-from spotipy.oauth2 import SpotifyOAuth
-from client_keys import ClientKeys
 from window_handler import WindowHandler
 from threading import Event
 
-os.environ["SPOTIPY_CLIENT_ID"] = ClientKeys.client_id
-os.environ["SPOTIPY_CLIENT_SECRET"] = ClientKeys.client_secret
-os.environ["SPOTIPY_REDIRECT_URI"] = "http://127.0.0.1:7777/"
+# os.environ["SPOTIPY_CLIENT_ID"] = ClientKeys.client_id
+# os.environ["SPOTIPY_CLIENT_SECRET"] = ClientKeys.client_secret
+# os.environ["SPOTIPY_REDIRECT_URI"] = "http://127.0.0.1:7777/"
 
 spotify_path = ""
 app = Application(backend = "uia")
+token = None
 
 class Program:
     # init spotify
     def __init__(self, app, evnt, window_handler):
-        self.scope = ["user-read-playback-state"]
-        self.spotify = spotipy.Spotify(auth_manager = SpotifyOAuth(scope = self.scope))
+        self.spotify = tekore.Spotify(token, asynchronous = True)#spotipy.Spotify(auth_manager = SpotifyOAuth(scope = self.scope))
         self.app = app
         self.evnt = evnt
         self.window_handler = window_handler
@@ -25,17 +24,16 @@ class Program:
 
     # check the current playback to see if an ad is playing
     # TODO: handle case where the player is paused but minimized so the api is still getting called
-    def check_for_ads(self):
-        self.refresh_token()
-        self.current_playback = self.spotify.current_playback()
+    async def check_for_ads(self):
+        self.current_playback = await self.spotify.playback_currently_playing()
 
-        if self.current_playback != None and self.current_playback["is_playing"]:
-            if self.current_playback["currently_playing_type"] == "ad":
+        if self.current_playback != None and self.current_playback.is_playing:
+            if self.current_playback.currently_playing_type == "ad":
                 print("Ad detected! Rebooting Spotify.")
                 self.reload_spotify()
             else:
                 # wait for the song to end
-                evnt.wait((self.current_playback["item"]["duration_ms"] - self.current_playback["progress_ms"]) / 1000)
+                evnt.wait((self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000)
 
     # refresh the cached token if it is expired. expires in about 1 hour
     def refresh_token(self):
@@ -62,9 +60,9 @@ class Program:
         self.restarting = False
         
 
-def main(program, window_handler):
+async def main(program, window_handler):
     if window_handler.can_check_ads:
-        program.check_for_ads()
+        await program.check_for_ads()
 
 if __name__ == "__main__":
     # get spotify.exe path
@@ -72,18 +70,30 @@ if __name__ == "__main__":
     print("INFO: Make sure Spotify was installed from spotify.com and not the Windows Store. Otherwise, this program will not open Spotify.")
     print("\nRunning...")
 
-    app.start(spotify_path)
-    time.sleep(2)
-
-    evnt = Event()
-    window_handler = WindowHandler(evnt, app.windows()[0])
-    program = Program(app, evnt, window_handler)
-    window_handler.program = program
-    window_handler.start()
-
+    import asyncio
     try:
+        # get the token
+        # if there is a config file, get the token from there. otherwise, get the token from a prompt
+        try:
+            config = tekore.config_from_file("./config.ini", return_refresh = True)
+            (client_id, client_secret, redirect_url, refresh_token) = config
+            token = refresh_token
+        except:
+            auth_helper = AuthHelper()
+            token = auth_helper.get_token()
+            tekore.config_to_file("./config.ini", ("client_id", "client_secret", "redirect_url", token.refresh_token))
+
+        app.start(spotify_path)
+        time.sleep(2)
+
+        evnt = Event()
+        window_handler = WindowHandler(evnt, app.windows()[0])
+        program = Program(app, evnt, window_handler)
+        window_handler.program = program
+        window_handler.start()
+
         while True:
-            main(program, window_handler)
+            asyncio.run(main(program, window_handler))
     except:
         print(traceback.format_exc())
         input("Error detected. Press ENTER to close...")
