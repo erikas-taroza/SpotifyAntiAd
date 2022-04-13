@@ -29,8 +29,14 @@ class Program:
         self.current_playback = self.spotify.current_playback()
 
         if self.current_playback != None and self.current_playback["is_playing"]:
-            # wait for the song to end
-            evnt.wait((self.current_playback["item"]["duration_ms"] - self.current_playback["progress_ms"]) / 1000)
+            try:
+                # wait for the song to end
+                evnt.wait((self.current_playback["item"]["duration_ms"] - self.current_playback["progress_ms"]) / 1000)
+            # handle error in case spotify is minimized during an ad
+            except TypeError:
+                if current_state == "ad":
+                    print("Ad detected! Rebooting Spotify.")
+                    self.reload_spotify()
 
             # if we dont wait some time here, we get a TypeError when main() calls this method again
             # ads dont provide the time needed in the calculation above
