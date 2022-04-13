@@ -35,13 +35,6 @@ class Program:
                 # wait for the song to end
                 evnt.wait((self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000)
 
-    # refresh the cached token if it is expired. expires in about 1 hour
-    def refresh_token(self):
-        auth = self.spotify.auth_manager
-        token = auth.get_cached_token()
-        if token != None and auth.is_token_expired(token):
-            auth.refresh_access_token(token["refresh_token"])
-
     # reopen spotify and play the next song
     def reload_spotify(self):
         self.restarting = True
