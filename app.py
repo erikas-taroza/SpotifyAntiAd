@@ -5,10 +5,6 @@ from pywinauto import Application
 from window_handler import WindowHandler
 from threading import Event
 
-# os.environ["SPOTIPY_CLIENT_ID"] = ClientKeys.client_id
-# os.environ["SPOTIPY_CLIENT_SECRET"] = ClientKeys.client_secret
-# os.environ["SPOTIPY_REDIRECT_URI"] = "http://127.0.0.1:7777/"
-
 spotify_path = ""
 app = Application(backend = "uia")
 token = None
@@ -27,7 +23,7 @@ class Program:
     # TODO: handle case where the player is paused but minimized so the api is still getting called
     async def check_for_ads(self):
         self.current_playback = await self.spotify.playback_currently_playing()
-        
+
         if self.current_playback != None and self.current_playback.is_playing:
             if self.current_playback.currently_playing_type == "ad":
                 print("Ad detected! Rebooting Spotify.")
