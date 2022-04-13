@@ -29,22 +29,26 @@ class Program:
         self.current_playback = self.spotify.current_playback()
 
         if self.current_playback != None and self.current_playback["is_playing"]:
-            try:
+            if self.current_playback["currently_playing_type"] == "ad":
+                print("Ad detected! Rebooting Spotify.")
+                self.reload_spotify()
+            else:
                 # wait for the song to end
                 evnt.wait((self.current_playback["item"]["duration_ms"] - self.current_playback["progress_ms"]) / 1000)
-            # handle error in case spotify is minimized during an ad
-            except TypeError:
-                if current_state == "ad":
-                    print("Ad detected! Rebooting Spotify.")
-                    self.reload_spotify()
+            # try:
+            #     # handle error in case spotify is minimized during an ad
+            # except TypeError:
+            #     if current_state == "ad":
+            #         print("Ad detected! Rebooting Spotify.")
+            #         self.reload_spotify()
 
             # if we dont wait some time here, we get a TypeError when main() calls this method again
             # ads dont provide the time needed in the calculation above
-            time.sleep(0.5)
-            current_state = self.spotify.current_playback()["currently_playing_type"]
-            if current_state == "ad":
-                print("Ad detected! Rebooting Spotify.")
-                self.reload_spotify()
+            # time.sleep(0.5)
+            # current_state = self.spotify.current_playback()["currently_playing_type"]
+            # if current_state == "ad":
+            #     print("Ad detected! Rebooting Spotify.")
+            #     self.reload_spotify()
 
     # refresh the cached token if it is expired. expires in about 1 hour
     def refresh_token(self):
