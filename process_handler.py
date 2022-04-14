@@ -26,9 +26,10 @@ class ProcessHandler(threading.Thread):
 
     # Check if the process (Spotify) is giving audio output.
     def poll_process_state(self):
-        if self.audio_meter.GetPeakValue() == 0:
+        vol = self.audio_meter.GetPeakValue()
+        if vol == 0:
             self.can_check_ads = False
             self.evnt.set()
             self.evnt.clear()
-        else:
+        elif vol > 0:
             self.can_check_ads = True
