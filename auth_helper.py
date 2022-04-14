@@ -6,6 +6,7 @@ from client_keys import ClientKeys
 # https://github.com/plamere/spotipy/blob/9a627e88f422927822ce39ae9919cc7ab9813dde/spotipy/oauth2.py
 
 class AuthHelper:
+    # Create a token from the redirect url.
     def get_token(self) -> tekore.RefreshingToken:
         cred = tekore.RefreshingCredentials(ClientKeys.client_id, ClientKeys.client_secret, "http://127.0.0.1:7777/")
         auth = tekore.UserAuth(cred, scope = tekore.scope.user_read_playback_state)
@@ -36,6 +37,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
         self.server.code = tekore.parse_code_from_url(self.path)
         self.server.state = tekore.parse_state_from_url(self.path)
 
+        # Update page
         self.send_response(200)
         self.send_header("Content-Type", "text/html")
         self.end_headers()

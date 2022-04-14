@@ -1,8 +1,8 @@
-import os, traceback, time, pyautogui, tekore
+import os, traceback, time, pyautogui, tekore, asyncio
 from client_keys import ClientKeys
 from auth_helper import AuthHelper
 from pywinauto import Application
-from window_handler import WindowHandler
+from process_handler import ProcessHandler
 from threading import Event
 
 spotify_path = ""
@@ -10,29 +10,28 @@ app = Application(backend = "uia")
 token = None
 
 class Program:
-    # init spotify
-    def __init__(self, app, evnt, window_handler):
-        self.spotify = tekore.Spotify(token, asynchronous = True)#spotipy.Spotify(auth_manager = SpotifyOAuth(scope = self.scope))
+    def __init__(self, app, evnt, process_handler):
+        self.spotify = tekore.Spotify(token, asynchronous = True)
         self.app = app
         self.evnt = evnt
-        self.window_handler = window_handler
+        self.process_handler: ProcessHandler = process_handler
         self.current_playback = None
         self.restarting = False
 
-    # check the current playback to see if an ad is playing
-    # TODO: handle case where the player is paused but minimized so the api is still getting called
+    # Check the current playback to see if an ad is playing.
     async def check_for_ads(self):
         self.current_playback = await self.spotify.playback_currently_playing()
 
         if self.current_playback != None and self.current_playback.is_playing:
+            # If there is something playing, check for ads or set the wait duration.
             if self.current_playback.currently_playing_type == "ad":
                 print("Ad detected! Rebooting Spotify.")
                 self.reload_spotify()
             else:
-                # wait for the song to end
+                # Wait for the song to end.
                 evnt.wait((self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000)
 
-    # reopen spotify and play the next song
+    # Reopen Spotify and play the next song.
     def reload_spotify(self):
         self.restarting = True
         self.app.kill()
@@ -42,27 +41,28 @@ class Program:
         time.sleep(1)
         window = self.app.windows()[0]
         window.set_focus()
-        pyautogui.press("playpause")
         pyautogui.press("nexttrack")
+        pyautogui.press("playpause")
         window.minimize()
 
-        self.window_handler.window = window
         self.restarting = False
         
 
-async def main(program, window_handler):
-    if window_handler.can_check_ads:
+async def main(program, process_handler):
+    if process_handler.can_check_ads:
+        # Even though we can check for ads, 
+        # we need to give Spotify some time to register our click on the play button.
+        await asyncio.sleep(0.2)
         await program.check_for_ads()
 
 if __name__ == "__main__":
-    # get spotify.exe path
+    # Get Spotify.exe path.
     spotify_path = os.path.expanduser("~") + "\\AppData\\Roaming\\Spotify\\Spotify.exe"
     print("INFO: Make sure Spotify was installed from spotify.com and not the Windows Store. Otherwise, this program will not open Spotify.")
     print("\nRunning...")
 
     try:
-        # get the token
-        # if there is a config file, get the token from there. otherwise, get the token from a prompt
+        # Get the token. If there is a config file, get the token from there. Otherwise, get the token from a prompt.
         try:
             config = tekore.config_from_file("./config.ini", return_refresh = True)
             (client_id, client_secret, redirect_url, refresh_token) = config
@@ -76,16 +76,15 @@ if __name__ == "__main__":
         time.sleep(2)
 
         evnt = Event()
-        window_handler = WindowHandler(evnt, app.windows()[0])
-        program = Program(app, evnt, window_handler)
-        window_handler.program = program
-        window_handler.start()
+        process_handler = ProcessHandler(evnt, app.windows()[0])
+        program = Program(app, evnt, process_handler)
+        process_handler.program = program
+        process_handler.start()
 
-        import asyncio
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         while True:
-            loop.run_until_complete(main(program, window_handler))
+            loop.run_until_complete(main(program, process_handler))
 
     except:
         print(traceback.format_exc())
