@@ -16,7 +16,6 @@ class Program:
         self.evnt = evnt
         self.process_handler: ProcessHandler = process_handler
         self.current_playback = None
-        self.restarting = False
 
     # Check the current playback to see if an ad is playing.
     async def check_for_ads(self):
@@ -33,7 +32,7 @@ class Program:
 
     # Reopen Spotify and play the next song.
     def reload_spotify(self):
-        self.restarting = True
+        self.process_handler.restarting = True
         self.app.kill()
         time.sleep(2)
         self.app.start(spotify_path)
@@ -45,7 +44,8 @@ class Program:
         pyautogui.press("playpause")
         window.minimize()
 
-        self.restarting = False
+        self.process_handler.window = window
+        self.process_handler.restarting = False
         
 
 async def main(program, process_handler):
