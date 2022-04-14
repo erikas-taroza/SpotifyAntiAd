@@ -1,50 +1,37 @@
-import os, traceback, time, pyautogui, spotipy
-from pywinauto import Application
-from spotipy.oauth2 import SpotifyOAuth
+import os, traceback, time, pyautogui, tekore, asyncio
 from client_keys import ClientKeys
-from window_handler import WindowHandler
+from auth_helper import AuthHelper
+from pywinauto import Application
+from process_handler import ProcessHandler
 from threading import Event
-
-os.environ["SPOTIPY_CLIENT_ID"] = ClientKeys.client_id
-os.environ["SPOTIPY_CLIENT_SECRET"] = ClientKeys.client_secret
-os.environ["SPOTIPY_REDIRECT_URI"] = "http://127.0.0.1:7777/"
 
 spotify_path = ""
 app = Application(backend = "uia")
+token = None
 
 class Program:
-    # init spotify
-    def __init__(self, app, evnt, window_handler):
-        self.scope = ["user-read-playback-state"]
-        self.spotify = spotipy.Spotify(auth_manager = SpotifyOAuth(scope = self.scope))
+    def __init__(self, app, evnt, process_handler):
+        self.spotify = tekore.Spotify(token, asynchronous = True)
         self.app = app
         self.evnt = evnt
-        self.window_handler = window_handler
+        self.process_handler: ProcessHandler = process_handler
         self.current_playback = None
         self.restarting = False
 
-    # check the current playback to see if an ad is playing
-    # TODO: handle case where the player is paused but minimized so the api is still getting called
-    def check_for_ads(self):
-        self.refresh_token()
-        self.current_playback = self.spotify.current_playback()
+    # Check the current playback to see if an ad is playing.
+    async def check_for_ads(self):
+        self.current_playback = await self.spotify.playback_currently_playing()
 
-        if self.current_playback != None and self.current_playback["is_playing"]:
-            if self.current_playback["currently_playing_type"] == "ad":
+        if self.current_playback != None and self.current_playback.is_playing:
+            # If there is something playing, check for ads or set the wait duration.
+            if self.current_playback.currently_playing_type == "ad":
                 print("Ad detected! Rebooting Spotify.")
                 self.reload_spotify()
             else:
-                # wait for the song to end
-                evnt.wait((self.current_playback["item"]["duration_ms"] - self.current_playback["progress_ms"]) / 1000)
+                # Wait for the song to end.
+                evnt.wait((self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000)
 
-    # refresh the cached token if it is expired. expires in about 1 hour
-    def refresh_token(self):
-        auth = self.spotify.auth_manager
-        token = auth.get_cached_token()
-        if token != None and auth.is_token_expired(token):
-            auth.refresh_access_token(token["refresh_token"])
-
-    # reopen spotify and play the next song
+    # Reopen Spotify and play the next song.
     def reload_spotify(self):
         self.restarting = True
         self.app.kill()
@@ -54,36 +41,51 @@ class Program:
         time.sleep(1)
         window = self.app.windows()[0]
         window.set_focus()
-        pyautogui.press("playpause")
         pyautogui.press("nexttrack")
+        pyautogui.press("playpause")
         window.minimize()
 
-        self.window_handler.window = window
         self.restarting = False
         
 
-def main(program, window_handler):
-    if window_handler.can_check_ads:
-        program.check_for_ads()
+async def main(program, process_handler):
+    if process_handler.can_check_ads:
+        # Even though we can check for ads, 
+        # we need to give Spotify some time to register our click on the play button.
+        await asyncio.sleep(0.2)
+        await program.check_for_ads()
 
 if __name__ == "__main__":
-    # get spotify.exe path
+    # Get Spotify.exe path.
     spotify_path = os.path.expanduser("~") + "\\AppData\\Roaming\\Spotify\\Spotify.exe"
     print("INFO: Make sure Spotify was installed from spotify.com and not the Windows Store. Otherwise, this program will not open Spotify.")
     print("\nRunning...")
 
-    app.start(spotify_path)
-    time.sleep(2)
-
-    evnt = Event()
-    window_handler = WindowHandler(evnt, app.windows()[0])
-    program = Program(app, evnt, window_handler)
-    window_handler.program = program
-    window_handler.start()
-
     try:
+        # Get the token. If there is a config file, get the token from there. Otherwise, get the token from a prompt.
+        try:
+            config = tekore.config_from_file("./config.ini", return_refresh = True)
+            (client_id, client_secret, redirect_url, refresh_token) = config
+            token = tekore.refresh_user_token(ClientKeys.client_id, ClientKeys.client_secret, refresh_token)
+        except:
+            auth_helper = AuthHelper()
+            token = auth_helper.get_token()
+            tekore.config_to_file("./config.ini", ("client_id", "client_secret", "redirect_url", token.refresh_token))
+
+        app.start(spotify_path)
+        time.sleep(2)
+
+        evnt = Event()
+        process_handler = ProcessHandler(evnt, app.windows()[0])
+        program = Program(app, evnt, process_handler)
+        process_handler.program = program
+        process_handler.start()
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         while True:
-            main(program, window_handler)
+            loop.run_until_complete(main(program, process_handler))
+
     except:
         print(traceback.format_exc())
         input("Error detected. Press ENTER to close...")
