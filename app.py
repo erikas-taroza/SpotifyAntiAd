@@ -17,26 +17,39 @@ class Program:
         self.spotify = tekore.Spotify(token, asynchronous = True)
         self.current_playback = None
         self.old_song = None
+        self.should_delay_for_state = False
+        self.getting_next_song = False
 
     # Check the current playback to see if an ad is playing.
     async def check_for_ads(self):
         self.current_playback: tekore.model.CurrentlyPlaying = await self.spotify.playback_currently_playing()
-        print("Current Playback")
+        print("Current Playback: " + "none" if self.current_playback == None else "exists")
 
         if self.current_playback != None:
+            self.should_delay_for_state = False
+
             # Check for ads or set the wait duration.
             if self.current_playback.currently_playing_type == "ad" or self.current_playback.currently_playing_type == "unknown":
                 print("\nAd detected! Rebooting Spotify.\n")
-                self.process_handler.getting_next_song = True
+                self.getting_next_song = True
                 self.reload_spotify()
             else:
                 song = self.current_playback.item
                 if self.current_playback.item != self.old_song:
                     print("Now Playing: \"{}\" by {}".format(song.name, ", ".join([artist.name for artist in song.artists])))
+
                 # Wait for the song to end.
-                evnt.wait((self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000)
-                self.process_handler.getting_next_song = True
+                wait_time = (self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000 
+                if wait_time == 0:
+                    self.should_delay_for_state = True
+                    return
+                
+                evnt.wait(wait_time)
+
+                self.getting_next_song = True
                 self.old_song = self.current_playback.item
+        else:
+            self.should_delay_for_state = True
 
     # Reopen Spotify and play the next song.
     def reload_spotify(self):
@@ -55,10 +68,12 @@ class Program:
         self.process_handler.set_restarting(False)
 
 async def main(program, process_handler):
-    if process_handler.is_state_valid and not process_handler.getting_next_song:
-        # Even though we can check for ads, 
-        # we need to give Spotify some time to register our click on the play button.
-        #await asyncio.sleep(0.3)
+    if process_handler.is_state_valid and not program.getting_next_song:
+        # If the event timer finishes before the player finishes the song, then this will be called repeatedly. Instead, we wait 2 seconds for the next song.
+        if program.should_delay_for_state:
+            print("delay")
+            await asyncio.sleep(2)
+        
         await program.check_for_ads()
 
 if __name__ == "__main__":
@@ -85,6 +100,7 @@ if __name__ == "__main__":
         evnt = Event()
         process_handler = ProcessHandler(evnt, app)
         program = Program(app, evnt, process_handler)
+        process_handler.program = program
         process_handler.start()
 
         loop = asyncio.new_event_loop()

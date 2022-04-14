@@ -10,8 +10,8 @@ class ProcessHandler(threading.Thread):
         self.window = self.app.windows()[0]
         self.is_state_valid = False
         self.restarting = False
-        self.getting_next_song = False
         self.audio_meter = None
+        self.program = None
 
     def run(self):
         while True:
@@ -24,12 +24,12 @@ class ProcessHandler(threading.Thread):
         try:
             if vol == 0 or self.window.is_active():
                 self.is_state_valid = False
-                self.getting_next_song = True
+                self.program.getting_next_song = True
                 self.evnt.set()
                 self.evnt.clear()
-            elif vol > 0.01:
+            elif vol > 0:
                 self.is_state_valid = True
-                self.getting_next_song = False
+                self.program.getting_next_song = False
 
         # Sometimes the window will be None. Just continue.
         except:
