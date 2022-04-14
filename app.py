@@ -16,23 +16,28 @@ class Program:
         self.evnt = evnt
         self.process_handler: ProcessHandler = process_handler
         self.current_playback = None
+        self.old_song = None
 
     # Check the current playback to see if an ad is playing.
     async def check_for_ads(self):
-        self.current_playback = await self.spotify.playback_currently_playing()
+        self.current_playback: tekore.model.CurrentlyPlaying = await self.spotify.playback_currently_playing()
 
-        if self.current_playback != None and self.current_playback.is_playing:
-            # If there is something playing, check for ads or set the wait duration.
+        if self.current_playback != None:
+            # Check for ads or set the wait duration.
             if self.current_playback.currently_playing_type == "ad":
-                print("Ad detected! Rebooting Spotify.")
+                print("\nAd detected! Rebooting Spotify.\n")
                 self.reload_spotify()
             else:
+                song = self.current_playback.item
+                if self.current_playback.item != self.old_song:
+                    print("Now Playing: \"{}\" by {}".format(song.name, ", ".join([artist.name for artist in song.artists])))
                 # Wait for the song to end.
                 evnt.wait((self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000)
+                self.old_song = self.current_playback.item
 
     # Reopen Spotify and play the next song.
     def reload_spotify(self):
-        self.process_handler.restarting = True
+        self.process_handler.set_restarting(True)
         self.app.kill()
         time.sleep(2)
         self.app.start(spotify_path)
@@ -40,13 +45,11 @@ class Program:
         time.sleep(1)
         window = self.app.windows()[0]
         window.set_focus()
-        pyautogui.press("nexttrack")
         pyautogui.press("playpause")
+        pyautogui.press("nexttrack")
         window.minimize()
 
-        self.process_handler.window = window
-        self.process_handler.restarting = False
-        
+        self.process_handler.set_restarting(False)
 
 async def main(program, process_handler):
     if process_handler.can_check_ads:
@@ -58,7 +61,8 @@ async def main(program, process_handler):
 if __name__ == "__main__":
     # Get Spotify.exe path.
     spotify_path = os.path.expanduser("~") + "\\AppData\\Roaming\\Spotify\\Spotify.exe"
-    print("INFO: Make sure Spotify was installed from spotify.com and not the Windows Store. Otherwise, this program will not open Spotify.")
+    print("INFO: Make sure Spotify was installed from spotify.com and not the Windows Store. Otherwise, this program will not open Spotify.\n")
+    print("INFO: If Spotify is focused, the ad checker will stop because it assumes you will change the player settings (ex. position in song).")
     print("\nRunning...")
 
     try:
@@ -76,7 +80,7 @@ if __name__ == "__main__":
         time.sleep(2)
 
         evnt = Event()
-        process_handler = ProcessHandler(evnt, app.windows()[0])
+        process_handler = ProcessHandler(evnt, app)
         program = Program(app, evnt, process_handler)
         process_handler.program = program
         process_handler.start()

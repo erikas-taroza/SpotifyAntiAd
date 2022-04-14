@@ -19,19 +19,19 @@ class ProcessHandler(threading.Thread):
     # Check if the process (Spotify) is giving audio output.
     def poll_process_state(self):
         vol = self.try_get_meter()
-        if vol == 0 or self.window.is_active():
+        if vol == 0 or self.window.windows()[0].is_active():
             self.can_check_ads = False
             self.evnt.set()
             self.evnt.clear()
         elif vol > 0:
             self.can_check_ads = True
+        time.sleep(3)
 
     # Try to get the audio meter. If it doesn't exist, wait until Spotify provides an audio output.
     def try_get_meter(self) -> int:
         try:
             return self.audio_meter.GetPeakValue()
         except AttributeError:
-            print("Searching for Spotify audio output...")
             while self.audio_meter == None:
                 sessions = AudioUtilities.GetAllSessions()
                 for session in sessions:
@@ -39,5 +39,9 @@ class ProcessHandler(threading.Thread):
                     if session.Process and session.Process.name() == "Spotify.exe":
                         self.audio_meter = session._ctl.QueryInterface(IAudioMeterInformation)
                 time.sleep(1)
-            print("Found Spotify audio output!\n")
             return self.audio_meter.GetPeakValue()
+
+    def set_restarting(self, value):
+        self.restarting = value
+        if value:
+            self.audio_meter = None
