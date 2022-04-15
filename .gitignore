@@ -1,6 +1,6 @@
 client_keys.py
 config.ini
-logo.ico
+*.ico
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
