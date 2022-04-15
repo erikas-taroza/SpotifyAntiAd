@@ -22,14 +22,17 @@ class ProcessHandler(threading.Thread):
     def poll_process_state(self):
         vol = self.try_get_meter()
         try:
-            if vol == 0 or self.window.is_active():
+            is_active = self.window.is_active()
+            if vol == 0 or is_active:
                 self.is_state_valid = False
-                self.program.getting_next_song = True
-                self.evnt.set()
-                self.evnt.clear()
+
+                # Make sure that we are only resetting the event if the current_song is not the old_song.
+                # Fixes the issue where the API gets called again because the event reset since it passed the if statement above.
+                if is_active or self.program.old_song != self.program.current_playback.item or not self.program.is_song_playing:
+                    self.evnt.set()
+                    self.evnt.clear()
             elif vol > 0:
                 self.is_state_valid = True
-                self.program.getting_next_song = False
 
         # Sometimes the window will be None. Just continue.
         except:

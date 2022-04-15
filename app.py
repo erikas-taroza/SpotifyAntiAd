@@ -1,4 +1,4 @@
-import os, traceback, time, pyautogui, tekore, asyncio
+import os, traceback, time, tekore, asyncio
 from client_keys import ClientKeys
 from auth_helper import AuthHelper
 from pywinauto import Application
@@ -9,6 +9,10 @@ spotify_path = ""
 app = Application(backend = "uia")
 token = None
 
+# TODO:
+# Fix delay problem by skipping the rest of the track or just accept the extra API calls. Maybe add 2 seconds to the event?
+# Move everything app related from program to processhandler
+
 class Program:
     def __init__(self, app, evnt, process_handler):
         self.app = app
@@ -17,63 +21,77 @@ class Program:
         self.spotify = tekore.Spotify(token, asynchronous = True)
         self.current_playback = None
         self.old_song = None
-        self.should_delay_for_state = False
-        self.getting_next_song = False
+        self.is_playing_song = False
+        self.got_ad = False
 
     # Check the current playback to see if an ad is playing.
     async def check_for_ads(self):
         self.current_playback: tekore.model.CurrentlyPlaying = await self.spotify.playback_currently_playing()
-        print("Current Playback: " + "none" if self.current_playback == None else "exists")
+        print("getting playback")
 
         if self.current_playback != None:
-            self.should_delay_for_state = False
-
-            # Check for ads or set the wait duration.
+            # Check for ads.
             if self.current_playback.currently_playing_type == "ad" or self.current_playback.currently_playing_type == "unknown":
                 print("\nAd detected! Rebooting Spotify.\n")
-                self.getting_next_song = True
                 self.reload_spotify()
+                self.got_ad = True
+            # Set the song duration and wait.
             else:
                 song = self.current_playback.item
                 if self.current_playback.item != self.old_song:
                     print("Now Playing: \"{}\" by {}".format(song.name, ", ".join([artist.name for artist in song.artists])))
 
-                # Wait for the song to end.
-                wait_time = (self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000 
-                if wait_time == 0:
-                    self.should_delay_for_state = True
+                seconds_left = (self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000
+                # This happens when the API says the song is done but the player is behind. Give some time for the player to catch up.
+                if seconds_left == 0:
+                    await asyncio.sleep(1)
                     return
                 
-                evnt.wait(wait_time)
-
-                self.getting_next_song = True
+                self.got_ad = False
                 self.old_song = self.current_playback.item
+
+                # Wait for the song to end.
+                self.is_playing_song = True
+                evnt.wait(seconds_left + 1.5) # Add 1.5s to the wait time to mitigate the player being behind the API. We don't want to delay too much because the ad will play for longer (if there is one).
+                self.is_playing_song = False
+        
+        # I don't know why this happens. 
+        # However, if it happens after we reloaded for an ad, then we should only wait for the state.
         else:
-            self.should_delay_for_state = True
+            print("Got a None playback state.")
+            if self.process_handler.try_get_meter() == 0:
+                print("Returned method because there was 0 volume detected")
+                return
+            if not self.got_ad:
+                print("Reloading Spotify because we didn't get an ad.")
+                self.reload_spotify()
+            print("Waiting for state")
+            await self.wait_for_state()
+
+    # Check every 10 seconds for a state until the state is not None.
+    async def wait_for_state(self):
+        while self.current_playback == None:
+            await asyncio.sleep(10)
+            self.current_playback = await self.spotify.playback_currently_playing()
 
     # Reopen Spotify and play the next song.
     def reload_spotify(self):
         self.process_handler.set_restarting(True)
+
         self.app.kill()
         time.sleep(2)
         self.app.start(spotify_path)
 
         time.sleep(1)
         window = self.app.windows()[0]
-        window.set_focus()
-        pyautogui.press("playpause")
-        pyautogui.press("nexttrack")
+        # Play and go to the next track.
+        window.type_keys("{VK_SPACE} ^{VK_RIGHT}")
         window.minimize()
 
         self.process_handler.set_restarting(False)
 
 async def main(program, process_handler):
-    if process_handler.is_state_valid and not program.getting_next_song:
-        # If the event timer finishes before the player finishes the song, then this will be called repeatedly. Instead, we wait 2 seconds for the next song.
-        if program.should_delay_for_state:
-            print("delay")
-            await asyncio.sleep(2)
-        
+    if process_handler.is_state_valid:
         await program.check_for_ads()
 
 if __name__ == "__main__":
