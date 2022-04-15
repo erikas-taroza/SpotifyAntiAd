@@ -24,7 +24,6 @@ class Program:
     async def check_for_ads(self):
         self.current_playback: tekore.model.CurrentlyPlaying = await self.spotify.playback_currently_playing()
         Logger.log("Getting playback state.")
-        print("Getting playback state.")
 
         if self.current_playback != None:
             # Check for ads.
