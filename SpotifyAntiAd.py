@@ -1,4 +1,4 @@
-import os, traceback, time, tekore, asyncio
+import os, traceback, time, tekore, asyncio, pyautogui
 from logger import Logger
 from client_keys import ClientKeys
 from auth_helper import AuthHelper
@@ -74,8 +74,10 @@ class Program:
     def reload_spotify(self):
         Logger.log("Reloading Spotify...")
         self.process_handler.restart_process()
+
         # Play and go to the next track.
-        self.process_handler.window.type_keys("{VK_SPACE} ^{VK_RIGHT}")
+        while self.process_handler.is_meter_available() == None:
+            self.process_handler.window.type_keys("{VK_SPACE} ^{VK_RIGHT}", set_foreground = True)
         self.process_handler.window.minimize()
 
         # Waits for Soptify API to receive the input above.
