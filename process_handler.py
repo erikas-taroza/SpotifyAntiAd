@@ -1,6 +1,9 @@
+import os
 import threading, time
 from pycaw.pycaw import AudioSession, AudioUtilities
 from pycaw.api.endpointvolume import IAudioMeterInformation
+
+spotify_path = os.path.expanduser("~") + "\\AppData\\Roaming\\Spotify\\Spotify.exe"
 
 class ProcessHandler(threading.Thread):
     def __init__(self, evnt, app):
@@ -26,7 +29,7 @@ class ProcessHandler(threading.Thread):
             if vol == 0 or is_active:
                 self.is_state_valid = False
 
-                # Make sure that we are only resetting the event if the current_song is not the old_song.
+                # Make sure that we are only resetting the event if we are supposed to.
                 # Fixes the issue where the API gets called again because the event reset since it passed the if statement above.
                 if is_active or self.program.old_song != self.program.current_playback.item or not self.program.is_song_playing:
                     self.evnt.set()
@@ -52,9 +55,15 @@ class ProcessHandler(threading.Thread):
                 time.sleep(1)
             return self.audio_meter.GetPeakValue()
 
-    def set_restarting(self, value):
-        self.restarting = value
-        if value:
-            self.audio_meter = None
-        else:
-            self.window = self.app.windows()[0]
+    def restart_process(self):
+        self.restarting = True
+        self.audio_meter = None
+
+        self.app.kill()
+        time.sleep(2)
+        self.app.start(spotify_path)
+        time.sleep(1)
+        self.window = self.app.windows()[0]
+
+        # Not set here because we wait some time for the Spotify API to get the play input. Set in Program.reload_spotify()
+        #self.restarting = False
