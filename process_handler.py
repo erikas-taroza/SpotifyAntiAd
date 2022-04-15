@@ -1,5 +1,4 @@
-import os
-import threading, time
+import threading, time, os, pyautogui
 from pycaw.pycaw import AudioSession, AudioUtilities
 from pycaw.api.endpointvolume import IAudioMeterInformation
 
@@ -25,7 +24,8 @@ class ProcessHandler(threading.Thread):
     def poll_process_state(self):
         vol = self.try_get_meter()
         try:
-            is_active = self.window.is_active()
+            
+            is_active = pyautogui.getActiveWindow()._hWnd == self.window.element_info.handle
             if vol == 0 or is_active:
                 self.is_state_valid = False
 
