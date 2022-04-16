@@ -75,9 +75,9 @@ class Program:
         Logger.log("Reloading Spotify...")
         self.process_handler.restart_process()
 
-        # Play and go to the next track.
-        while self.process_handler.is_meter_available() == None:
-            self.process_handler.window.type_keys("{VK_MEDIA_PLAY_PAUSE} {VK_MEDIA_NEXT_TRACK}", set_foreground = True)
+        # Play the next track.
+        parent = self.process_handler.app.Spotify.window(control_type = "Document").children()[2]
+        parent.children(title = "Next")[0].click()
         self.process_handler.window.minimize()
 
         # Waits for Soptify API to receive the input above.

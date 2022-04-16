@@ -1,5 +1,5 @@
 import threading, time, os, pyautogui
-from pycaw.pycaw import AudioSession, AudioUtilities
+from pycaw.pycaw import AudioUtilities
 from pycaw.api.endpointvolume import IAudioMeterInformation
 
 spotify_path = os.path.expanduser("~") + "\\AppData\\Roaming\\Spotify\\Spotify.exe"
