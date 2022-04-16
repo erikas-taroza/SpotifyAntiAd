@@ -18,9 +18,10 @@ class Logger:
     except FileNotFoundError:
         pass
 
-    def log(message):
+    def log(message, print_to_console = False):
         if Logger.can_log:
             export = open("./log.txt", "a")
-            print(message)
             export.write(message + "\n")
             export.close()
+        if print_to_console:
+            print(message)

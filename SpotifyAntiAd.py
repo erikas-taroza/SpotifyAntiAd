@@ -28,8 +28,7 @@ class Program:
         if self.current_playback != None:
             # Check for ads.
             if self.current_playback.currently_playing_type == "ad" or self.current_playback.currently_playing_type == "unknown":
-                print("\nAd detected! Rebooting Spotify.\n")
-                Logger.log("Ad detected! Rebooting Spotify.")
+                Logger.log("\nAd detected! Rebooting Spotify.\n", True)
                 self.reload_spotify()
                 self.got_ad = True
             # Set the song duration and wait.
@@ -37,8 +36,7 @@ class Program:
                 song = self.current_playback.item
                 if self.current_playback.item != self.old_song:
                     artists = ", ".join([artist.name for artist in song.artists])
-                    print(f"Now Playing: \"{song.name}\" by {artists}")
-                    Logger.log(f"Now Playing: \"{song.name}\" by {artists}")
+                    Logger.log(f"Now Playing: \"{song.name}\" by {artists}", True)
 
                 seconds_left = (self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000
                 # This happens when the API says the song is done but the player is behind. Give some time for the player to catch up.
@@ -91,9 +89,8 @@ async def main(program, process_handler):
 
 if __name__ == "__main__":
     print("INFO: Make sure Spotify was installed from spotify.com and not the Windows Store. Otherwise, this program will not open Spotify.\n")
-    print("INFO: If Spotify is focused, the ad checker will stop because it assumes you will change the player settings (ex. position in song).")
-    print("\nRunning...")
-    Logger.log("Running...")
+    print("INFO: If Spotify is focused, the ad checker will stop because it assumes you will change the player settings (ex. position in song).\n")
+    Logger.log("Running...", True)
 
     try:
         # Get the token. If there is a config file, get the token from there. Otherwise, get the token from a prompt.
@@ -121,5 +118,5 @@ if __name__ == "__main__":
             loop.run_until_complete(main(program, process_handler))
 
     except:
-        print(traceback.format_exc())
+        Logger.log(traceback.format_exc(), True)
         input("Error detected. Press ENTER to close...")
