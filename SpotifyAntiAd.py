@@ -1,4 +1,4 @@
-import os, traceback, time, tekore, asyncio, pyautogui
+import os, traceback, time, tekore, asyncio
 from logger import Logger
 from client_keys import ClientKeys
 from auth_helper import AuthHelper
@@ -77,7 +77,7 @@ class Program:
 
         # Play and go to the next track.
         while self.process_handler.is_meter_available() == None:
-            self.process_handler.window.type_keys("{VK_SPACE} ^{VK_RIGHT}", set_foreground = True)
+            self.process_handler.window.type_keys("{VK_MEDIA_PLAY_PAUSE} {VK_MEDIA_NEXT_TRACK}", set_foreground = True)
         self.process_handler.window.minimize()
 
         # Waits for Soptify API to receive the input above.
