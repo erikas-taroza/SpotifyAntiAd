@@ -84,7 +84,7 @@ class ProcessHandler(threading.Thread):
             try:
                 self.app.start(spotify_path_normal)
             except:
-                Logger.log("Unable to open Spotify.")
+                Logger.log("Unable to open Spotify.", True)
         finally:
             time.sleep(1)
             self.window = self.app.Spotify
