@@ -71,7 +71,7 @@ class Program:
         self.process_handler.restart_process()
 
         # Play the next track.
-        parent = self.process_handler.app.Spotify.window(control_type = "Document").children()[2]
+        parent = self.process_handler.app.Spotify.by(control_type = "Document").children()[2]
         parent.children(title = "Next")[0].click()
         self.process_handler.window.minimize()
 

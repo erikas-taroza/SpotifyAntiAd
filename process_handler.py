@@ -67,9 +67,9 @@ class ProcessHandler(threading.Thread):
 
     def restart_process(self):
         self.restarting = True
-        self.audio_meter.Release()
+        self.audio_meter = None
 
-        self.app.kill(soft = True)
+        self.app.kill()
         time.sleep(2)
         self.start_process()
         
