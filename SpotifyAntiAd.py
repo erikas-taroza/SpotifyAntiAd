@@ -25,7 +25,7 @@ class Program:
             # Check for ads.
             if self.current_playback.currently_playing_type == "ad" or self.current_playback.currently_playing_type == "unknown":
                 Logger.log("\nAd detected! Rebooting Spotify.\n", True)
-                await self.reload_spotify()
+                self.reload_spotify()
                 self.got_ad = True
             # Set the song duration and wait.
             else:
@@ -55,7 +55,7 @@ class Program:
             Logger.log("Playback received is None.")
             if not self.got_ad:
                 Logger.log("Restarting Spotify because we did not get an ad when the playback was None.")
-                await self.reload_spotify()
+                self.reload_spotify()
             Logger.log("Waiting for a better state because playback was None.")
             await self.wait_for_state()
 
@@ -66,9 +66,9 @@ class Program:
             self.current_playback = await self.spotify.playback_currently_playing()
 
     # Reopen Spotify and play the next song.
-    async def reload_spotify(self):
+    def reload_spotify(self):
         Logger.log("Reloading Spotify...")
-        await self.process_handler.restart_process()
+        self.process_handler.restart_process()
 
         # Play the next track.
         parent = self.process_handler.app.Spotify.window(control_type = "Document").children()[2]
@@ -103,11 +103,11 @@ if __name__ == "__main__":
             token = auth_helper.get_token()
             tekore.config_to_file("./config.ini", ("client_id", "client_secret", "redirect_url", token.refresh_token))
 
-        app.start(spotify_path)
-        time.sleep(2)
-        
         evnt = Event()
         process_handler = ProcessHandler(evnt, app)
+        process_handler.start_process()
+        time.sleep(2)
+
         program = Program(token, evnt, process_handler)
         process_handler.program = program
         process_handler.start()
