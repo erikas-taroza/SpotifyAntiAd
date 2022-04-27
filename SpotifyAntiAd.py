@@ -2,16 +2,12 @@ import os, traceback, time, tekore, asyncio
 from logger import Logger
 from client_keys import ClientKeys
 from auth_helper import AuthHelper
-from pywinauto import Application
 from process_handler import ProcessHandler
 from threading import Event
-
-spotify_path = os.path.expanduser("~") + "\\AppData\\Roaming\\Spotify\\Spotify.exe"
-app = Application(backend = "uia")
-token = None
+from pywinauto import Application
 
 class Program:
-    def __init__(self, evnt, process_handler):
+    def __init__(self, token, evnt, process_handler):
         self.evnt = evnt
         self.process_handler: ProcessHandler = process_handler
         self.spotify = tekore.Spotify(token, asynchronous = True)
@@ -29,7 +25,7 @@ class Program:
             # Check for ads.
             if self.current_playback.currently_playing_type == "ad" or self.current_playback.currently_playing_type == "unknown":
                 Logger.log("\nAd detected! Rebooting Spotify.\n", True)
-                self.reload_spotify()
+                await self.reload_spotify()
                 self.got_ad = True
             # Set the song duration and wait.
             else:
@@ -50,7 +46,7 @@ class Program:
 
                 # Wait for the song to end.
                 self.is_playing_song = True
-                evnt.wait(seconds_left + 1.5) # Add 1.5s to the wait time to mitigate the player being behind the API. We don't want to delay too much because the ad will play for longer (if there is one).
+                self.evnt.wait(seconds_left + 1.5) # Add 1.5s to the wait time to mitigate the player being behind the API. We don't want to delay too much because the ad will play for longer (if there is one).
                 self.is_playing_song = False
         
         # I don't know why this happens. 
@@ -59,7 +55,7 @@ class Program:
             Logger.log("Playback received is None.")
             if not self.got_ad:
                 Logger.log("Restarting Spotify because we did not get an ad when the playback was None.")
-                self.reload_spotify()
+                await self.reload_spotify()
             Logger.log("Waiting for a better state because playback was None.")
             await self.wait_for_state()
 
@@ -70,9 +66,9 @@ class Program:
             self.current_playback = await self.spotify.playback_currently_playing()
 
     # Reopen Spotify and play the next song.
-    def reload_spotify(self):
+    async def reload_spotify(self):
         Logger.log("Reloading Spotify...")
-        self.process_handler.restart_process()
+        await self.process_handler.restart_process()
 
         # Play the next track.
         parent = self.process_handler.app.Spotify.window(control_type = "Document").children()[2]
@@ -92,6 +88,10 @@ if __name__ == "__main__":
     print("INFO: If Spotify is focused, the ad checker will stop because it assumes you will change the player settings (ex. position in song).\n")
     Logger.log("Running...", True)
 
+    spotify_path = "\"{}\\AppData\\Roaming\\Spotify\\Spotify.exe\"".format(os.path.expanduser("~"))
+    app = Application(backend = "uia")
+    token = None
+
     try:
         # Get the token. If there is a config file, get the token from there. Otherwise, get the token from a prompt.
         try:
@@ -105,10 +105,10 @@ if __name__ == "__main__":
 
         app.start(spotify_path)
         time.sleep(2)
-
+        
         evnt = Event()
         process_handler = ProcessHandler(evnt, app)
-        program = Program(evnt, process_handler)
+        program = Program(token, evnt, process_handler)
         process_handler.program = program
         process_handler.start()
 

@@ -1,5 +1,6 @@
 client_keys.py
 config.ini
+log.txt
 *.ico
 
 # Byte-compiled / optimized / DLL files

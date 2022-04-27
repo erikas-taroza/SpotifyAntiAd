@@ -1,18 +1,20 @@
 import threading, time, os, pyautogui
 from pycaw.pycaw import AudioUtilities
 from pycaw.api.endpointvolume import IAudioMeterInformation
+from pywinauto import Application, WindowSpecification
+from logger import Logger
 
-spotify_path = os.path.expanduser("~") + "\\AppData\\Roaming\\Spotify\\Spotify.exe"
+spotify_path = "\"{}\\AppData\\Roaming\\Spotify\\Spotify.exe\"".format(os.path.expanduser("~"))
 
 class ProcessHandler(threading.Thread):
     def __init__(self, evnt, app):
         threading.Thread.__init__(self)
-        self.evnt = evnt
-        self.app = app
-        self.window = self.app.windows()[0]
+        self.evnt: threading.Event = evnt
+        self.app: Application = app
+        self.window: WindowSpecification = self.app.Spotify
         self.is_state_valid = False
         self.restarting = False
-        self.audio_meter = None
+        self.audio_meter: IAudioMeterInformation = None
         self.program = None
 
     def run(self):
@@ -24,7 +26,7 @@ class ProcessHandler(threading.Thread):
     def poll_process_state(self):
         vol = self.try_get_meter()
         try:
-            is_active = pyautogui.getActiveWindow()._hWnd == self.window.element_info.handle
+            is_active = pyautogui.getActiveWindow()._hWnd == self.window.backend.element_info_class.get_active().parent.handle
             if vol == 0 or is_active:
                 self.is_state_valid = False
 
@@ -45,11 +47,13 @@ class ProcessHandler(threading.Thread):
         try:
             return self.audio_meter.GetPeakValue()
         except AttributeError:
+            Logger.log("Could not get audio output from Spotify. Waiting for output...", True)
             while self.audio_meter == None:
                 session = self.is_meter_available()
                 if session != None:
                     self.audio_meter = session._ctl.QueryInterface(IAudioMeterInformation)
                 time.sleep(1)
+            Logger.log("Got audio output.", True)
             return self.audio_meter.GetPeakValue()
 
     def is_meter_available(self):
@@ -60,15 +64,15 @@ class ProcessHandler(threading.Thread):
 
         return None
 
-    def restart_process(self):
+    async def restart_process(self):
         self.restarting = True
-        self.audio_meter = None
+        self.audio_meter.Release()
 
-        self.app.kill()
-        time.sleep(2)
+        self.app.kill(soft = True)
+        await time.sleep(2)
         self.app.start(spotify_path)
-        time.sleep(1)
-        self.window = self.app.windows()[0]
+        await time.sleep(1)
+        self.window = self.app.Spotify
 
         # Not set here because we wait some time for the Spotify API to get the play input. Set in Program.reload_spotify()
         #self.restarting = False
