@@ -6,6 +6,9 @@ from process_handler import ProcessHandler
 from threading import Event
 from pywinauto import Application
 
+# Using this version of pywinauto: https://github.com/pywinauto/pywinauto/tree/44ca38c0617299d7c4158cbb887fe0ec3dfc7135
+# For some reason the program suddenly stopped working so switching to the updated lib and refactoring solved the problem.
+
 class Program:
     def __init__(self, token, evnt, process_handler):
         self.evnt = evnt
@@ -23,7 +26,7 @@ class Program:
 
         if self.current_playback != None:
             # Check for ads.
-            if self.current_playback.currently_playing_type == "track" or self.current_playback.currently_playing_type == "unknown":
+            if self.current_playback.currently_playing_type == "ad" or self.current_playback.currently_playing_type == "unknown":
                 Logger.log("\nAd detected! Rebooting Spotify.\n", True)
                 self.reload_spotify()
                 self.got_ad = True
@@ -71,7 +74,7 @@ class Program:
         self.process_handler.restart_process()
 
         # Play the next track.
-        self.process_handler.window.type_keys("^{VK_RIGHT}")
+        self.process_handler.window.type_keys("^{VK_RIGHT}").minimize()
 
         # Waits for Soptify API to receive the input above.
         time.sleep(0.5)

@@ -72,7 +72,6 @@ class ProcessHandler(threading.Thread):
         self.app.kill()
         time.sleep(2)
         self.start_process()
-        
 
         # Not set here because we wait some time for the Spotify API to get the play input. Set in Program.reload_spotify()
         #self.restarting = False
@@ -87,4 +86,4 @@ class ProcessHandler(threading.Thread):
                 Logger.log("Unable to open Spotify.", True)
         finally:
             time.sleep(1)
-            self.window = self.app.SpotifyFree
+            self.window = self.app.Chrome_WidgetWin_0
