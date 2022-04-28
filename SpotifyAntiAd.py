@@ -74,7 +74,8 @@ class Program:
         self.process_handler.restart_process()
 
         # Play the next track.
-        self.process_handler.window.type_keys("^{VK_RIGHT}").minimize()
+        self.process_handler.window.send_keystrokes("^{VK_RIGHT}")
+        self.process_handler.window.minimize()
 
         # Waits for Soptify API to receive the input above.
         time.sleep(0.5)
