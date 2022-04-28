@@ -1,4 +1,4 @@
-import threading, time, os, pyautogui
+import threading, time, os
 from pycaw.pycaw import AudioUtilities
 from pycaw.api.endpointvolume import IAudioMeterInformation
 from pywinauto import Application, WindowSpecification
@@ -27,7 +27,7 @@ class ProcessHandler(threading.Thread):
     def poll_process_state(self):
         vol = self.try_get_meter()
         try:
-            is_active = pyautogui.getActiveWindow()._hWnd == self.window.backend.element_info_class.get_active().parent.handle
+            is_active = self.app.backend.element_info_class.get_active().process_id == self.app.process
             if vol == 0 or is_active:
                 self.is_state_valid = False
 
@@ -87,4 +87,4 @@ class ProcessHandler(threading.Thread):
                 Logger.log("Unable to open Spotify.", True)
         finally:
             time.sleep(1)
-            self.window = self.app.Spotify
+            self.window = self.app.SpotifyFree

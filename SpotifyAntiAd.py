@@ -23,7 +23,7 @@ class Program:
 
         if self.current_playback != None:
             # Check for ads.
-            if self.current_playback.currently_playing_type == "ad" or self.current_playback.currently_playing_type == "unknown":
+            if self.current_playback.currently_playing_type == "track" or self.current_playback.currently_playing_type == "unknown":
                 Logger.log("\nAd detected! Rebooting Spotify.\n", True)
                 self.reload_spotify()
                 self.got_ad = True
@@ -71,9 +71,7 @@ class Program:
         self.process_handler.restart_process()
 
         # Play the next track.
-        parent = self.process_handler.app.Spotify.by(control_type = "Document").children()[2]
-        parent.children(title = "Next")[0].click()
-        self.process_handler.window.minimize()
+        self.process_handler.window.type_keys("^{VK_RIGHT}")
 
         # Waits for Soptify API to receive the input above.
         time.sleep(0.5)
@@ -89,7 +87,7 @@ if __name__ == "__main__":
     Logger.log("Running...", True)
 
     spotify_path = "\"{}\\AppData\\Roaming\\Spotify\\Spotify.exe\"".format(os.path.expanduser("~"))
-    app = Application(backend = "uia")
+    app = Application()
     token = None
 
     try:
