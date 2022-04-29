@@ -77,13 +77,6 @@ class ProcessHandler(threading.Thread):
         #self.restarting = False
 
     def start_process(self):
-        try:
-            self.app.start(spotify_path_quotations)
-        except:
-            try:
-                self.app.start(spotify_path_normal)
-            except:
-                Logger.log("Unable to open Spotify.", True)
-        finally:
-            time.sleep(1)
-            self.window = self.app.Chrome_WidgetWin_0
+        self.app.start(spotify_path_quotations)
+        time.sleep(1)
+        self.window = self.app.Chrome_WidgetWin_0

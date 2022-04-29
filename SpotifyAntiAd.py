@@ -75,6 +75,7 @@ class Program:
 
         # Play the next track.
         self.process_handler.window.send_keystrokes("^{VK_RIGHT}")
+        time.sleep(0.5)
         self.process_handler.window.minimize()
 
         # Waits for Soptify API to receive the input above.
