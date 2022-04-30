@@ -4,8 +4,7 @@ from pycaw.api.endpointvolume import IAudioMeterInformation
 from pywinauto import Application, WindowSpecification
 from logger import Logger
 
-spotify_path_quotations = "\"{}\\AppData\\Roaming\\Spotify\\Spotify.exe\"".format(os.path.expanduser("~"))
-spotify_path_normal = os.path.expanduser("~") + "\\AppData\\Roaming\\Spotify\\Spotify.exe"
+spotify_path = "\"{}\\AppData\\Roaming\\Spotify\\Spotify.exe\"".format(os.path.expanduser("~"))
 
 class ProcessHandler(threading.Thread):
     def __init__(self, evnt, app):
@@ -49,11 +48,13 @@ class ProcessHandler(threading.Thread):
             return self.audio_meter.GetPeakValue()
         except AttributeError:
             Logger.log("\nCould not get audio output from Spotify. Waiting for output...")
+
             while self.audio_meter == None:
                 session = self.is_meter_available()
                 if session != None:
                     self.audio_meter = session._ctl.QueryInterface(IAudioMeterInformation)
                 time.sleep(1)
+
             Logger.log("Got audio output.\n")
             return self.audio_meter.GetPeakValue()
 
@@ -77,6 +78,5 @@ class ProcessHandler(threading.Thread):
         #self.restarting = False
 
     def start_process(self):
-        self.app.start(spotify_path_quotations)
-        time.sleep(1)
+        self.app.start(spotify_path)
         self.window = self.app.Chrome_WidgetWin_0
