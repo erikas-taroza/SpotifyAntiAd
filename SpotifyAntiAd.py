@@ -41,7 +41,7 @@ class Program:
                 # This happens when the API says the song is done but the player is behind. Give some time for the player to catch up.
                 if seconds_left == 0:
                     Logger.log("Song has ended but the player is behind. Waiting...")
-                    await asyncio.sleep(1)
+                    time.sleep(1)
                     return
                 
                 self.got_ad = False
@@ -65,7 +65,8 @@ class Program:
     # Check every 10 seconds for a usable state. We can check at this interval because no ads should be playing.
     async def wait_for_state(self):
         while self.current_playback == None:
-            await asyncio.sleep(10)
+            Logger.log("Trying to get a better state...")
+            time.sleep(30)
             self.current_playback = await self.spotify.playback_currently_playing()
 
     # Reopen Spotify and play the next song.
@@ -74,7 +75,8 @@ class Program:
         self.process_handler.restart_process()
         
         # Play the next track.
-        while self.process_handler.is_meter_available() == None:
+        while self.process_handler.is_meter_available() == None: # While loop to ensure that the next track is played.
+            # Using a modified version of pywinauto where send_keystrokes() returns self and also calls win32gui.ShowWindow() and sleeps for 0.1s at the end.
             self.process_handler.window.send_keystrokes("^{VK_RIGHT}").minimize()
 
         # Waits for Soptify API to receive the input above.

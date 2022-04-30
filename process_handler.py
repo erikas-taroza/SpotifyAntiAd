@@ -25,6 +25,7 @@ class ProcessHandler(threading.Thread):
     # Check if the process (Spotify) is giving audio output.
     def poll_process_state(self):
         vol = self.try_get_meter()
+
         try:
             is_active = self.app.backend.element_info_class.get_active().process_id == self.app.process
             if vol == 0 or is_active:
@@ -53,7 +54,6 @@ class ProcessHandler(threading.Thread):
                 session = self.is_meter_available()
                 if session != None:
                     self.audio_meter = session._ctl.QueryInterface(IAudioMeterInformation)
-                time.sleep(1)
 
             Logger.log("Got audio output.\n")
             return self.audio_meter.GetPeakValue()
