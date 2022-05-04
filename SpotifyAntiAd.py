@@ -1,3 +1,4 @@
+import threading
 import traceback, time, tekore, asyncio
 from logger import Logger
 from client_keys import ClientKeys
@@ -8,7 +9,7 @@ from pywinauto import Application
 
 # Using this version of pywinauto: https://github.com/pywinauto/pywinauto/tree/44ca38c0617299d7c4158cbb887fe0ec3dfc7135
 # For some reason the program suddenly stopped working so switching to the updated lib and refactoring solved the problem.
-
+app = Application()
 class Program:
     def __init__(self, token, evnt, process_handler):
         self.evnt = evnt
@@ -18,6 +19,8 @@ class Program:
         self.old_song = None
         self.is_playing_song = False
         self.got_ad = False
+
+        self.restart_timed_out = False
 
     # Check the current playback to see if an ad is playing.
     async def check_for_ads(self):
@@ -72,15 +75,49 @@ class Program:
     # Reopen Spotify and play the next song.
     def reload_spotify(self):
         Logger.log("Reloading Spotify...")
+
+        # Stop the current thread.
+        self.process_handler.restarting = True
+        self.process_handler.join()
+
+        # Create a new thread.
+        self.process_handler = ProcessHandler(self.evnt, app)
+        self.process_handler.program = self
+
         self.process_handler.restart_process()
+        
+        # def timeout():
+        #     time.sleep(2)
+        #     self.restart_timed_out = True
+        #     print("timed out")
 
         # Play the next track.
-        while self.process_handler.is_meter_available() == None: # While loop to ensure that the next track is played.
-            self.process_handler.window.type_keys("^{VK_RIGHT}").minimize()
+        #t = threading.Thread(target = timeout)
+        #t.start()
+        # while self.process_handler.is_meter_available() == None: # While loop to ensure that the next track is played.
+        #     if not self.restart_timed_out:
+        #         self.process_handler.window.send_keystrokes("^{VK_RIGHT}")
+        #         self.process_handler.window.minimize()
+        #         print("soft")
+        #     else:
+        #         self.process_handler.window.set_focus().type_keys("^{VK_RIGHT}").minimize()
+        #     time.sleep(0.1)
 
+        # while self.process_handler.is_meter_available() == None:
+        #     self.process_handler.window.send_keystrokes("^{VK_RIGHT}")
+        #     self.process_handler.window.minimize()
+        #     time.sleep(0.1)
+        #     print("soft")
+
+        # Play the next track.
+        self.process_handler.window.send_keystrokes("^{VK_RIGHT}")
+        self.process_handler.window.minimize()
+
+        #t.join()
+        #self.restart_timed_out = False
         # Waits for Soptify API to receive the input above.
         time.sleep(1)
-        self.process_handler.restarting = False
+        self.process_handler.start() # Start listening for window updates again.
 
 async def main(program, process_handler):
     if process_handler.is_state_valid:
@@ -105,10 +142,10 @@ if __name__ == "__main__":
             tekore.config_to_file("./config.ini", ("client_id", "client_secret", "redirect_url", token.refresh_token))
 
         evnt = Event()
-        process_handler = ProcessHandler(evnt, Application())
+        process_handler = ProcessHandler(evnt, app)
         process_handler.start_process()
         time.sleep(2)
-
+    
         program = Program(token, evnt, process_handler)
         process_handler.program = program
         process_handler.start()

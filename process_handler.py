@@ -1,4 +1,4 @@
-import threading, time, os
+import threading, time, os, pyautogui
 from pycaw.pycaw import AudioUtilities
 from pycaw.api.endpointvolume import IAudioMeterInformation
 from pywinauto import Application, WindowSpecification
@@ -9,6 +9,8 @@ spotify_path = "\"{}\\AppData\\Roaming\\Spotify\\Spotify.exe\"".format(os.path.e
 class ProcessHandler(threading.Thread):
     def __init__(self, evnt, app):
         threading.Thread.__init__(self)
+        self.name = "ProcessHandlerThread"
+        
         self.evnt: threading.Event = evnt
         self.app: Application = app
         self.window: WindowSpecification = None
@@ -18,16 +20,16 @@ class ProcessHandler(threading.Thread):
         self.program = None
 
     def run(self):
-        while True:
-            if not self.restarting:
-                self.poll_process_state()
+        while not self.restarting:
+            self.poll_process_state()
 
     # Check if the process (Spotify) is giving audio output.
     def poll_process_state(self):
         vol = self.try_get_meter()
 
         try:
-            is_active = self.app.backend.element_info_class.get_active().process_id == self.app.process
+            #is_active = self.app.backend.element_info_class.get_active().process_id == self.app.process
+            is_active = pyautogui.getActiveWindow()._hWnd == self.window.handle
             if vol == 0 or is_active:
                 self.is_state_valid = False
 
@@ -67,15 +69,9 @@ class ProcessHandler(threading.Thread):
         return None
 
     def restart_process(self):
-        self.restarting = True
-        self.audio_meter = None
-
         self.app.kill()
         time.sleep(2)
         self.start_process()
-
-        # Not set here because we wait some time for the Spotify API to get the play input. Set in Program.reload_spotify()
-        #self.restarting = False
 
     def start_process(self):
         self.app.start(spotify_path)
