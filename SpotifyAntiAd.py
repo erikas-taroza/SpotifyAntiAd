@@ -62,7 +62,7 @@ class Program:
             Logger.log("Waiting for a better state because playback was None.")
             await self.wait_for_state()
 
-    # Check every 10 seconds for a usable state. We can check at this interval because no ads should be playing.
+    # Check every time period for a usable state. We can check at this interval because no ads should be playing.
     async def wait_for_state(self):
         while self.current_playback == None:
             Logger.log("Trying to get a better state...")
@@ -73,11 +73,10 @@ class Program:
     def reload_spotify(self):
         Logger.log("Reloading Spotify...")
         self.process_handler.restart_process()
-        
+
         # Play the next track.
         while self.process_handler.is_meter_available() == None: # While loop to ensure that the next track is played.
-            # Using a modified version of pywinauto where send_keystrokes() returns self and also calls win32gui.ShowWindow() and sleeps for 0.1s at the end.
-            self.process_handler.window.send_keystrokes("^{VK_RIGHT}").minimize()
+            self.process_handler.window.type_keys("^{VK_RIGHT}").minimize()
 
         # Waits for Soptify API to receive the input above.
         time.sleep(1)
