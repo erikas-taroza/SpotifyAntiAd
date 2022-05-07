@@ -29,7 +29,7 @@ class ProcessHandler(threading.Thread):
 
         try:
             is_active = self.app.backend.element_info_class.get_active().process_id == self.app.process
-            
+
             #is_active = pyautogui.getActiveWindow()._hWnd == self.window.handle
             if vol == 0 or is_active:
                 self.is_state_valid = False
@@ -39,7 +39,7 @@ class ProcessHandler(threading.Thread):
                 if is_active or self.program.old_song != self.program.current_playback.item or not self.program.is_song_playing:
                     self.evnt.set()
                     self.evnt.clear()
-            elif vol > 0:
+            elif vol > 0 and not is_active:
                 self.is_state_valid = True
 
         # Sometimes the window will be None. Just continue.
@@ -71,7 +71,7 @@ class ProcessHandler(threading.Thread):
 
     def restart_process(self):
         self.app.kill()
-        time.sleep(1)
+        time.sleep(0.5)
         self.start_process()
 
     def start_process(self):

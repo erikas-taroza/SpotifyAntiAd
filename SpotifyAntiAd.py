@@ -20,8 +20,6 @@ class Program:
         self.is_playing_song = False
         self.got_ad = False
 
-        self.restart_timed_out = False
-
     # Check the current playback to see if an ad is playing.
     async def check_for_ads(self):
         self.current_playback: tekore.model.CurrentlyPlaying = await self.spotify.playback_currently_playing()
@@ -87,18 +85,23 @@ class Program:
         self.process_handler.restart_process()
 
         # Play the next track.
-        self.process_handler.window.Document.Group3.children()[4].click()
+        #print(self.process_handler.app.window(control_type = "Pane").by(control_type = "Document").by(name = "", found_index = 0).children())
+        button = self.process_handler.window.Document # Cant call this in one line because it takes FOREVER
+        button = button.Group3
+        button = button.children()[4]
+        button.click()
+        self.process_handler.window.minimize()
         # while self.process_handler.is_meter_available() == None: # While loop to ensure that the next track is played.
         #     self.process_handler.window.send_keystrokes("^{VK_RIGHT}")
         #     self.process_handler.window.minimize()
         #     print("Pressed")
 
-        # Waits for Soptify API to receive the input above.
-        time.sleep(1)
+        # Waits for Spotify API to receive the input above.
+        time.sleep(2)
         self.process_handler.start() # Start listening for window updates again.
 
-async def main(program, process_handler):
-    if process_handler.is_state_valid:
+async def main(program):
+    if program.process_handler.is_state_valid:
         await program.check_for_ads()
 
 if __name__ == "__main__":
@@ -131,7 +134,7 @@ if __name__ == "__main__":
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         while True:
-            loop.run_until_complete(main(program, process_handler))
+            loop.run_until_complete(main(program))
 
     except:
         Logger.log(traceback.format_exc(), True)
