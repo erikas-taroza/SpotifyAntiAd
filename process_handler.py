@@ -28,8 +28,9 @@ class ProcessHandler(threading.Thread):
         vol = self.try_get_meter()
 
         try:
-            #is_active = self.app.backend.element_info_class.get_active().process_id == self.app.process
-            is_active = pyautogui.getActiveWindow()._hWnd == self.window.handle
+            is_active = self.app.backend.element_info_class.get_active().process_id == self.app.process
+            
+            #is_active = pyautogui.getActiveWindow()._hWnd == self.window.handle
             if vol == 0 or is_active:
                 self.is_state_valid = False
 
@@ -70,9 +71,9 @@ class ProcessHandler(threading.Thread):
 
     def restart_process(self):
         self.app.kill()
-        time.sleep(2)
+        time.sleep(1)
         self.start_process()
 
     def start_process(self):
         self.app.start(spotify_path)
-        self.window = self.app.Chrome_WidgetWin_0
+        self.window = self.app.Pane

@@ -1,4 +1,3 @@
-import threading
 import traceback, time, tekore, asyncio
 from logger import Logger
 from client_keys import ClientKeys
@@ -9,7 +8,8 @@ from pywinauto import Application
 
 # Using this version of pywinauto: https://github.com/pywinauto/pywinauto/tree/44ca38c0617299d7c4158cbb887fe0ec3dfc7135
 # For some reason the program suddenly stopped working so switching to the updated lib and refactoring solved the problem.
-app = Application()
+app = Application(backend = "uia")
+
 class Program:
     def __init__(self, token, evnt, process_handler):
         self.evnt = evnt
@@ -85,36 +85,14 @@ class Program:
         self.process_handler.program = self
 
         self.process_handler.restart_process()
-        
-        # def timeout():
-        #     time.sleep(2)
-        #     self.restart_timed_out = True
-        #     print("timed out")
 
         # Play the next track.
-        #t = threading.Thread(target = timeout)
-        #t.start()
+        self.process_handler.window.Document.Group3.children()[4].click()
         # while self.process_handler.is_meter_available() == None: # While loop to ensure that the next track is played.
-        #     if not self.restart_timed_out:
-        #         self.process_handler.window.send_keystrokes("^{VK_RIGHT}")
-        #         self.process_handler.window.minimize()
-        #         print("soft")
-        #     else:
-        #         self.process_handler.window.set_focus().type_keys("^{VK_RIGHT}").minimize()
-        #     time.sleep(0.1)
-
-        # while self.process_handler.is_meter_available() == None:
         #     self.process_handler.window.send_keystrokes("^{VK_RIGHT}")
         #     self.process_handler.window.minimize()
-        #     time.sleep(0.1)
-        #     print("soft")
+        #     print("Pressed")
 
-        # Play the next track.
-        self.process_handler.window.send_keystrokes("^{VK_RIGHT}")
-        self.process_handler.window.minimize()
-
-        #t.join()
-        #self.restart_timed_out = False
         # Waits for Soptify API to receive the input above.
         time.sleep(1)
         self.process_handler.start() # Start listening for window updates again.
