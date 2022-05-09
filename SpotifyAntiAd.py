@@ -8,7 +8,7 @@ from pywinauto import Application
 
 # Using this version of pywinauto: https://github.com/pywinauto/pywinauto/tree/44ca38c0617299d7c4158cbb887fe0ec3dfc7135
 # For some reason the program suddenly stopped working so switching to the updated lib and refactoring solved the problem.
-app = Application(backend = "uia")
+app = Application(backend = "win32")
 
 class Program:
     def __init__(self, token, evnt, process_handler):
@@ -18,7 +18,6 @@ class Program:
         self.current_playback = None
         self.old_song = None
         self.is_playing_song = False
-        self.got_ad = False
 
     # Check the current playback to see if an ad is playing.
     async def check_for_ads(self):
@@ -30,7 +29,6 @@ class Program:
             if self.current_playback.currently_playing_type == "ad" or self.current_playback.currently_playing_type == "unknown":
                 Logger.log("\nAd detected! Rebooting Spotify.\n", True)
                 self.reload_spotify()
-                self.got_ad = True
             # Set the song duration and wait.
             else:
                 song = self.current_playback.item
@@ -45,7 +43,6 @@ class Program:
                     time.sleep(1)
                     return
                 
-                self.got_ad = False
                 self.old_song = self.current_playback.item
 
                 # Wait for the song to end.
@@ -53,14 +50,9 @@ class Program:
                 self.evnt.wait(seconds_left + 1.5) # Add 1.5s to the wait time to mitigate the player being behind the API. We don't want to delay too much because the ad will play for longer (if there is one).
                 self.is_playing_song = False
         
-        # I don't know why this happens. 
-        # However, if it happens after we reloaded for an ad, then we should only wait for the state.
+        # Usually we receive an empty playback when the Spotify app wasn't given enough time to communicate with the API.
         else:
-            Logger.log("Playback received is None.")
-            if not self.got_ad:
-                Logger.log("Restarting Spotify because we did not get an ad when the playback was None.")
-                self.reload_spotify()
-            Logger.log("Waiting for a better state because playback was None.")
+            Logger.log("Current playback is unavailable. Waiting for a better state...", True)
             await self.wait_for_state()
 
     # Check every time period for a usable state. We can check at this interval because no ads should be playing.
@@ -85,19 +77,12 @@ class Program:
         self.process_handler.restart_process()
 
         # Play the next track.
-        #print(self.process_handler.app.window(control_type = "Pane").by(control_type = "Document").by(name = "", found_index = 0).children())
-        button = self.process_handler.window.Document # Cant call this in one line because it takes FOREVER
-        button = button.Group3
-        button = button.children()[4]
-        button.click()
+        self.process_handler.window.send_message(0x0319, 0, 720896) # https://stackoverflow.com/questions/31733002/how-to-interact-with-spotifys-window-app-change-track-etc
+        time.sleep(0.1) # Lessens the chance that we get an empty playback.
         self.process_handler.window.minimize()
-        # while self.process_handler.is_meter_available() == None: # While loop to ensure that the next track is played.
-        #     self.process_handler.window.send_keystrokes("^{VK_RIGHT}")
-        #     self.process_handler.window.minimize()
-        #     print("Pressed")
 
-        # Waits for Spotify API to receive the input above.
-        time.sleep(2)
+        # Waits for the Spotify app to process inputs above.
+        time.sleep(1)
         self.process_handler.start() # Start listening for window updates again.
 
 async def main(program):
