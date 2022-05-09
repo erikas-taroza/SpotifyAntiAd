@@ -34,7 +34,9 @@ class Program:
                 song = self.current_playback.item
                 if self.current_playback.item != self.old_song:
                     artists = ", ".join([artist.name for artist in song.artists])
-                    Logger.log(f"Now Playing: \"{song.name}\" by {artists}", True)
+
+                    if(artists.isprintable() and song.name.isprintable()):
+                        Logger.log(f"Now Playing: \"{song.name}\" by {artists}", True)
 
                 seconds_left = (self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000
                 # This happens when the API says the song is done but the player is behind. Give some time for the player to catch up.
