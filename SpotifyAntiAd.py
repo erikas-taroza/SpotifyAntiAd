@@ -82,7 +82,7 @@ class Program:
         self.process_handler.window.minimize()
 
         # Waits for the Spotify app to process inputs above.
-        time.sleep(1)
+        time.sleep(3)
         self.process_handler.start() # Start listening for window updates again.
 
 async def main(program):
