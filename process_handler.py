@@ -1,7 +1,7 @@
 import threading, time, os, pyautogui
 from pycaw.pycaw import AudioUtilities
 from pycaw.api.endpointvolume import IAudioMeterInformation
-from pywinauto import Application, WindowSpecification
+from pywinauto import Application, controls
 from logger import Logger
 
 spotify_path = "\"{}\\AppData\\Roaming\\Spotify\\Spotify.exe\"".format(os.path.expanduser("~"))
@@ -13,7 +13,7 @@ class ProcessHandler(threading.Thread):
         
         self.evnt: threading.Event = evnt
         self.app: Application = app
-        self.window: WindowSpecification = None
+        self.window: controls.hwndwrapper.HwndWrapper = None
         self.is_state_valid = False
         self.restarting = False
         self.audio_meter: IAudioMeterInformation = None
