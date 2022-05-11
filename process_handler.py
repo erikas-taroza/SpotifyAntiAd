@@ -28,7 +28,8 @@ class ProcessHandler(threading.Thread):
         vol = self.try_get_meter()
 
         try:
-            is_active = pyautogui.getActiveWindow()._hWnd == self.window.handle
+            active_window = pyautogui.getActiveWindow()
+            is_active = active_window._hWnd == self.window.handle and not active_window.isMinimized
             if vol == 0 or is_active:
                 self.is_state_valid = False
 

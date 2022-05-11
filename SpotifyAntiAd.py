@@ -25,17 +25,23 @@ class Program:
         Logger.log("Getting playback state.")
 
         if self.current_playback != None:
+            # Handle unknown type. Usually happens after a reboot. Proceed once the state has been updated.
+            if self.current_playback.currently_playing_type == "unknown":
+                self.current_playback = None
+                await self.wait_for_state()
+
             # Check for ads.
-            if self.current_playback.currently_playing_type == "ad" or self.current_playback.currently_playing_type == "unknown":
+            if self.current_playback.currently_playing_type == "ad":
                 Logger.log("\nAd detected! Rebooting Spotify.\n", True)
                 self.reload_spotify()
+
             # Set the song duration and wait.
             else:
                 song = self.current_playback.item
                 if self.current_playback.item != self.old_song:
                     artists = ", ".join([artist.name for artist in song.artists])
 
-                    if(artists.isprintable() and song.name.isprintable()):
+                    if artists.isprintable() and song.name.isprintable():
                         Logger.log(f"Now Playing: \"{song.name}\" by {artists}", True)
 
                 seconds_left = (self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000
@@ -54,15 +60,20 @@ class Program:
         
         # Usually we receive an empty playback when the Spotify app wasn't given enough time to communicate with the API.
         else:
-            Logger.log("Current playback is unavailable. Waiting for a better state...", True)
             await self.wait_for_state()
 
     # Check every time period for a usable state. We can check at this interval because no ads should be playing.
     async def wait_for_state(self):
+        Logger.log("Current playback is unavailable. Waiting for a better state...", True)
+
         while self.current_playback == None:
-            Logger.log("Trying to get a better state...")
             time.sleep(30)
-            self.current_playback = await self.spotify.playback_currently_playing()
+            Logger.log("Trying to get a better state...")
+
+            pb = await self.spotify.playback_currently_playing()
+            if pb != None and pb.currently_playing_type != "unknown":
+                self.current_playback = pb
+                break
 
     # Reopen Spotify and play the next song.
     def reload_spotify(self):
@@ -79,12 +90,13 @@ class Program:
         self.process_handler.restart_process()
 
         # Play the next track.
-        self.process_handler.window.send_message(0x0319, 0, 720896) # https://stackoverflow.com/questions/31733002/how-to-interact-with-spotifys-window-app-change-track-etc
-        time.sleep(0.1) # Lessens the chance that we get an empty playback.
-        self.process_handler.window.minimize()
+        while self.process_handler.is_meter_available() == None:
+            self.process_handler.window.send_message(0x0319, 0, 720896) # https://stackoverflow.com/questions/31733002/how-to-interact-with-spotifys-window-app-change-track-etc
+            self.process_handler.window.minimize()
+            time.sleep(0.5)
 
         # Waits for the Spotify app to process inputs above.
-        time.sleep(3)
+        time.sleep(4.5)
         self.process_handler.start() # Start listening for window updates again.
 
 async def main(program):
