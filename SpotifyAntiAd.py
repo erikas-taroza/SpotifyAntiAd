@@ -124,7 +124,6 @@ if __name__ == "__main__":
         evnt = Event()
         process_handler = ProcessHandler(evnt, app)
         process_handler.start_process()
-        time.sleep(2)
     
         program = Program(token, evnt, process_handler)
         process_handler.program = program

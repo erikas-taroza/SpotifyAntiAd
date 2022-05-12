@@ -30,12 +30,13 @@ class ProcessHandler(threading.Thread):
         try:
             active_window = pyautogui.getActiveWindow()
             is_active = active_window._hWnd == self.window.handle and not active_window.isMinimized
+
             if vol == 0 or is_active:
                 self.is_state_valid = False
 
                 # Make sure that we are only resetting the event if we are supposed to.
                 # Fixes the issue where the API gets called again because the event reset since it passed the if statement above.
-                if is_active or self.program.old_song != self.program.current_playback.item or not self.program.is_song_playing:
+                if is_active or self.program.old_song != self.program.current_playback.item or not self.program.is_playing_song:
                     self.evnt.set()
                     self.evnt.clear()
             elif vol > 0 and not is_active:
@@ -43,6 +44,8 @@ class ProcessHandler(threading.Thread):
 
         # Sometimes the window will be None. Just continue.
         except:
+            if not self.app.is_process_running():
+                raise Exception("Spotify has been closed when the program is running!")
             return
 
     # Try to get the audio meter. If it doesn't exist, wait until Spotify provides an audio output.
@@ -71,9 +74,18 @@ class ProcessHandler(threading.Thread):
     def restart_process(self):
         self.app.kill()
         time.sleep(0.5)
-        self.start_process()
+        self.start_process(True)
 
-    def start_process(self):
-        self.app.start(spotify_path)
+    # Tries to connect to Spotify if it is already started. Otherwise, it starts a new Spotify instance.
+    def start_process(self, force_start = False):
+        if force_start:
+            self.app.start(spotify_path)
+        else:
+            try:
+                self.app.connect(path = spotify_path[1:-1], timeout = 1) # Gets the first process opened from the path.
+                Logger.log("Connected to existing Spotify instance.")
+            except:
+                self.app.start(spotify_path)
+                
         time.sleep(0.5)
         self.window = self.app.Chrome_WidgetWin_0
