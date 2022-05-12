@@ -45,11 +45,13 @@ class ProcessHandler(threading.Thread):
         # Sometimes the window will be None. Just continue.
         except:
             if not self.app.is_process_running():
-                raise Exception("Spotify has been closed when the program is running!")
+                self.is_state_valid = False
+                self.restarting = True
+                Logger.log("Connection to Spotify has been lost. Restart the program to reconnect.", True)
             return
 
     # Try to get the audio meter. If it doesn't exist, wait until Spotify provides an audio output.
-    def try_get_meter(self) -> int:
+    def try_get_meter(self) -> float:
         try:
             return self.audio_meter.GetPeakValue()
         except AttributeError:
