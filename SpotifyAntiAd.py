@@ -1,4 +1,4 @@
-import traceback, time, tekore, asyncio
+import traceback, time, tekore, asyncio, threading
 from logger import Logger
 from client_keys import ClientKeys
 from auth_helper import AuthHelper
@@ -12,7 +12,7 @@ app = Application(backend = "win32")
 
 class Program:
     def __init__(self, token, evnt, process_handler):
-        self.evnt = evnt
+        self.evnt:threading.Event = evnt
         self.process_handler: ProcessHandler = process_handler
         self.spotify = tekore.Spotify(token, asynchronous = True)
         self.current_playback = None
@@ -33,6 +33,7 @@ class Program:
             # Check for ads.
             if self.current_playback.currently_playing_type == "ad":
                 Logger.log("\nAd detected! Rebooting Spotify.\n", True)
+                self.old_song = None
                 self.reload_spotify()
 
             # Set the song duration and wait.
@@ -55,6 +56,7 @@ class Program:
 
                 # Wait for the song to end.
                 self.is_playing_song = True
+                self.evnt.clear()
                 self.evnt.wait(seconds_left + 1.5) # Add 1.5s to the wait time to mitigate the player being behind the API. We don't want to delay too much because the ad will play for longer (if there is one).
                 self.is_playing_song = False
         

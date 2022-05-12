@@ -36,9 +36,10 @@ class ProcessHandler(threading.Thread):
 
                 # Make sure that we are only resetting the event if we are supposed to.
                 # Fixes the issue where the API gets called again because the event reset since it passed the if statement above.
-                if is_active or self.program.old_song != self.program.current_playback.item or not self.program.is_playing_song:
-                    self.evnt.set()
-                    self.evnt.clear()
+                if is_active  or not self.program.is_playing_song:
+                    if not self.evnt.isSet():
+                        self.evnt.set()
+                        
             elif vol > 0 and not is_active:
                 self.is_state_valid = True
 
