@@ -89,12 +89,20 @@ class Program:
         self.process_handler = ProcessHandler(self.evnt, app)
         self.process_handler.program = self
 
+        import win32gui, win32com.client, pyautogui
+        prev = pyautogui.getActiveWindow()._hWnd
+
         self.process_handler.restart_process()
+        self.process_handler.window.minimize()
+        
+        # Give focus back to the previous app.
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shell.SendKeys("{F16}")
+        win32gui.SetForegroundWindow(prev)
 
         # Play the next track.
         while self.process_handler.is_meter_available() == None:
             self.process_handler.window.send_message(0x0319, 0, 720896) # https://stackoverflow.com/questions/31733002/how-to-interact-with-spotifys-window-app-change-track-etc
-            self.process_handler.window.minimize()
             time.sleep(0.5)
 
         # Waits for the Spotify app to process inputs above.
@@ -126,7 +134,6 @@ if __name__ == "__main__":
         evnt = Event()
         process_handler = ProcessHandler(evnt, app)
         process_handler.start_process()
-    
         program = Program(token, evnt, process_handler)
         process_handler.program = program
         process_handler.start()

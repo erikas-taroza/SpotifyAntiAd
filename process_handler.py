@@ -76,7 +76,6 @@ class ProcessHandler(threading.Thread):
 
     def restart_process(self):
         self.app.kill()
-        time.sleep(0.5)
         self.start_process(True)
 
     # Tries to connect to Spotify if it is already started. Otherwise, it starts a new Spotify instance.
