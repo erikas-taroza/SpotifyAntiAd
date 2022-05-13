@@ -99,7 +99,7 @@ class ProcessHandler(threading.Thread):
         self.is_state_valid = False
         self.audio_meter = None
         self.program.old_song = None # Allows the Now Playing message to be reprinted if the same song is still playing.
-        Logger.log("\nConnection to Spotify has been lost. Waiting for Spotify to re-open...", True)
+        Logger.log("\nConnection to Spotify has been lost. Waiting for Spotify to reopen...", True)
 
         while not self.app.is_process_running():
             try:
