@@ -14,6 +14,7 @@ class ProcessHandler(threading.Thread):
         self.evnt: threading.Event = evnt
         self.app: Application = app
         self.window: controls.hwndwrapper.HwndWrapper = None
+        self.handle = 0
         self.is_state_valid = False
         self.restarting = False
         self.audio_meter: IAudioMeterInformation = None
@@ -28,14 +29,14 @@ class ProcessHandler(threading.Thread):
         vol = self.try_get_meter()
 
         try:
-            is_active = pyautogui.getActiveWindow()._hWnd == self.window.handle
+            is_active = pyautogui.getActiveWindow()._hWnd == self.handle
 
             if vol == 0 or is_active:
                 self.is_state_valid = False
 
                 # Make sure that we are only resetting the event if we are supposed to.
                 # Fixes the issue where the API gets called again because the event reset since it passed the if statement above.
-                if is_active  or not self.program.is_playing_song:
+                if is_active or not self.program.is_playing_song:
                     if not self.evnt.isSet():
                         self.evnt.set()
                         
@@ -93,6 +94,7 @@ class ProcessHandler(threading.Thread):
                 
         time.sleep(0.5)
         self.window = self.app.Chrome_WidgetWin_0
+        self.handle = self.window.handle
 
     # Tries to reconnect to Spotify every second.
     def handle_lost_process(self):

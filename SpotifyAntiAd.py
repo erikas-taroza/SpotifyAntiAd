@@ -45,11 +45,10 @@ class Program:
                     if artists.isprintable() and song.name.isprintable():
                         Logger.log(f"Now Playing: \"{song.name}\" by {artists}", True)
 
-                seconds_left = (self.current_playback.item.duration_ms - self.current_playback.progress_ms) / 1000
-                # This happens when the API says the song is done but the player is behind. Give some time for the player to catch up.
+                seconds_left = (song.duration_ms - self.current_playback.progress_ms) / 1000
                 if seconds_left == 0:
-                    Logger.log("Song has ended but the player is behind. Waiting...")
-                    time.sleep(1)
+                    time.sleep(0.2)
+                    Logger.log("Waiting for player to catch up.")
                     return
                 
                 self.old_song = self.current_playback.item
@@ -57,7 +56,7 @@ class Program:
                 # Wait for the song to end.
                 self.is_playing_song = True
                 self.evnt.clear()
-                self.evnt.wait(seconds_left + 1.5) # Add 1.5s to the wait time to mitigate the player being behind the API. We don't want to delay too much because the ad will play for longer (if there is one).
+                self.evnt.wait(seconds_left + 1) # The player is always behind the API so we wait 1 more second.
                 self.is_playing_song = False
         
         # Usually we receive an empty playback when the Spotify app wasn't given enough time to communicate with the API.
@@ -69,7 +68,7 @@ class Program:
         Logger.log("Current playback is unavailable. Waiting for a better state...", True)
 
         while self.current_playback == None:
-            time.sleep(30)
+            time.sleep(60)
             Logger.log("Trying to get a better state...")
 
             pb = await self.spotify.playback_currently_playing()
@@ -93,13 +92,13 @@ class Program:
         # Play the next track.
         while self.process_handler.is_meter_available() == None:
             self.process_handler.window.send_message(0x0319, 0, 720896) # https://stackoverflow.com/questions/31733002/how-to-interact-with-spotifys-window-app-change-track-etc
-            time.sleep(0.5)
+            time.sleep(1)
 
         # Waits for the Spotify app to process inputs above.
-        time.sleep(4.5)
+        time.sleep(4)
         self.process_handler.start() # Start listening for window updates again.
 
-async def main(program):
+async def main(program: Program):
     if program.process_handler.is_state_valid:
         await program.check_for_ads()
 
